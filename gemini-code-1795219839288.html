@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="💱">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2077 / / EXCHANGE</title>
+<style>
+  :root { color-scheme: dark; --bg:#05060a; --fg:#e8fff7; --accent:#00ffc8; box-sizing:border-box;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--fg); overflow:hidden; }
+  body { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; touch-action:none; }
+  #bg { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; pointer-events:none; }
+  .banner { position:fixed; top:calc(env(safe-area-inset-top, 0px) + 20px); left:0; right:0; z-index:2;
+    background:rgba(0,0,0,.65); padding:16px 20px 10px; pointer-events:none; text-align:center; }
+  h1 { margin:0;
+    text-align:center; font-family:"Inter", "Helvetica Neue", Arial, sans-serif; font-size:clamp(16px,3.6vw,30px);
+    letter-spacing:.42em; text-indent:.42em; font-weight:300; text-transform:uppercase; }
+  h1 .num { font-weight:600; }
+  h1 .sep { font-weight:400; margin:0 .3em; opacity:.95; }
+  h1 .num, h1 .sep, h1 .name { background:linear-gradient(100deg,#19ff7a 0%,#ff8a1f 16.6%,#a24bff 33.3%,#2b4bff 50%,#00e5ff 66.6%,#ffe81f 83.3%,#19ff7a 100%);
+    background-size:300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:sweep 6s linear infinite; }
+  h1 .sep { animation-delay:-.4s; }
+  h1 .name { animation-delay:-.8s; font-weight:600; }
+  @keyframes sweep { from { background-position:0% 50%; } to { background-position:300% 50%; } }
+  @media (prefers-reduced-motion: reduce) { h1 .num, h1 .sep, h1 .name, h1::after { animation:none; } }
+  h1::after { content:""; display:block; width:min(280px,50vw); height:1px; margin:14px auto 0;
+    background:linear-gradient(90deg,#19ff7a,#ff8a1f,#a24bff,#2b4bff,#00e5ff,#ffe81f,#19ff7a); background-size:300% 100%;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000,transparent); mask-image:linear-gradient(90deg,transparent,#000,transparent); animation:sweep 6s linear infinite; }
+  .banner p { max-width:680px; margin:0 auto; padding:0; max-height:0; opacity:0; overflow:hidden; color:#fff;
+    font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size:clamp(11px,1.5vw,13px);
+    line-height:1.6; letter-spacing:.02em; transition:max-height .35s ease, opacity .25s ease, margin .35s ease; }
+  .banner.open p { max-height:360px; opacity:1; margin:12px auto 6px; }
+  .pull { display:inline-flex; align-items:center; justify-content:center; width:44px; height:18px; margin:6px auto 0;
+    border:0; background:transparent; color:#fff; font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size:12px; line-height:1; cursor:pointer; pointer-events:auto; touch-action:manipulation; opacity:.85; }
+  .pull:hover { opacity:1; }
+  canvas#c { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:1; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="banner" id="b">
+  <h1><span class="num">2077</span><span class="sep">/ /</span><span class="name">EXCHANGE</span></h1>
+  <p id="info">sprite.exchange and 1337.exchange have merged and are now integrated into exchange.2077.cloud. New user registrations are currently closed. Existing users have received an access link by email from exchange@2077.cloud or wallet@2077.cloud to sign in to their accounts. Internal crypto swaps, conversions, and transfers to other platform users are free and instant. Withdrawals to external wallets take up to 48 hours, with expedited processing available for an additional fee. Our crypto anonymization service is free up to 5 times per month for amounts under $10,000, after which standard fees apply.</p>
+  <button type="button" class="pull" id="pull" aria-expanded="false" aria-controls="info">&#9662;</button>
+</div>
+<canvas id="c"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  var bgCanvas = document.getElementById('bg');
+  var bgCtx = bgCanvas.getContext('2d');
+  var nodes = [], N = 46, maxDist = 175;
+  function sizeBg() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    bgCanvas.width = window.innerWidth * dpr;
+    bgCanvas.height = window.innerHeight * dpr;
+    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  sizeBg();
+  for (var k = 0; k < N; k++) {
+    nodes.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.45,
+      vy: (Math.random() - 0.5) * 0.45,
+      c: k % 3 === 0 ? '0,255,200' : (k % 3 === 1 ? '162,75,255' : '0,229,255')
+    });
+  }
+  window.addEventListener('resize', function () {
+    sizeBg();
+    nodes.forEach(function (nd) {
+      nd.x = Math.min(window.innerWidth, nd.x);
+      nd.y = Math.min(window.innerHeight, nd.y);
+    });
+  });
+  function drawNet() {
+    requestAnimationFrame(drawNet);
+    var w = window.innerWidth, h = window.innerHeight;
+    bgCtx.clearRect(0, 0, w, h);
+    bgCtx.strokeStyle = 'rgba(0,255,200,0.04)';
+    bgCtx.lineWidth = 1;
+    var step = 64;
+    for (var gx = 0; gx < w; gx += step) {
+      bgCtx.beginPath(); bgCtx.moveTo(gx, 0); bgCtx.lineTo(gx, h); bgCtx.stroke();
+    }
+    for (var gy = 0; gy < h; gy += step) {
+      bgCtx.beginPath(); bgCtx.moveTo(0, gy); bgCtx.lineTo(w, gy); bgCtx.stroke();
+    }
+    for (var i = 0; i < nodes.length; i++) {
+      var a = nodes[i];
+      a.x += a.vx; a.y += a.vy;
+      if (a.x < 0 || a.x > w) a.vx *= -1;
+      if (a.y < 0 || a.y > h) a.vy *= -1;
+      for (var j = i + 1; j < nodes.length; j++) {
+        var b = nodes[j], dx = a.x - b.x, dy = a.y - b.y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < maxDist) {
+          var alpha = (1 - d / maxDist) * 0.24;
+          bgCtx.strokeStyle = 'rgba(' + a.c + ',' + alpha.toFixed(3) + ')';
+          bgCtx.beginPath(); bgCtx.moveTo(a.x, a.y); bgCtx.lineTo(b.x, b.y); bgCtx.stroke();
+        }
+      }
+      bgCtx.fillStyle = 'rgba(' + a.c + ',0.65)';
+      bgCtx.beginPath(); bgCtx.arc(a.x, a.y, 2, 0, Math.PI * 2); bgCtx.fill();
+    }
+  }
+  drawNet();
+
+  var banner = document.getElementById('b');
+  var pull = document.getElementById('pull');
+  var startY = null;
+  function setOpen(v) {
+    banner.classList.toggle('open', v);
+    pull.setAttribute('aria-expanded', v ? 'true' : 'false');
+    pull.innerHTML = v ? '&#9652;' : '&#9662;';
+  }
+  pull.addEventListener('pointerdown', function (e) { startY = e.clientY; });
+  pull.addEventListener('pointerup', function (e) {
+    if (startY !== null) {
+      if (e.clientY - startY > 12) setOpen(true);
+      else if (startY - e.clientY > 12) setOpen(false);
+      else setOpen(!banner.classList.contains('open'));
+      startY = null;
+    }
+  });
+  pull.addEventListener('click', function () {
+    if (startY === null) setOpen(!banner.classList.contains('open'));
+  });
+
+  var COUNT = 25, SCALE = 0.55, RADIUS = 1.2 * SCALE + 0.08, MAX_SPEED = 6;
+  var canvas = document.getElementById('c');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.z = 9;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  var l1 = new THREE.PointLight(0x00ffc8, 1.2, 40); l1.position.set(-6, 5, 8); scene.add(l1);
+  var l2 = new THREE.PointLight(0xff2bd6, 1.2, 40); l2.position.set(6, -4, 8); scene.add(l2);
+
+  function face(bg, draw) {
+    var s = 512, cv = document.createElement('canvas'); cv.width = cv.height = s;
+    var x = cv.getContext('2d');
+    x.fillStyle = bg; x.fillRect(0, 0, s, s);
+    x.translate(s / 2, s / 2); x.rotate(-Math.PI / 2); x.translate(-s / 2, -s / 2);
+    x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 14;
+    x.beginPath(); x.arc(s / 2, s / 2, 218, 0, Math.PI * 2); x.stroke();
+    x.fillStyle = '#fff'; x.strokeStyle = '#fff';
+    draw(x);
+    var t = new THREE.CanvasTexture(cv); t.anisotropy = 4; return t;
+  }
+
+  var drawBTC = function (x) {
+    x.font = 'bold 320px Arial, Helvetica, sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('\u20BF', 256, 270);
+  };
+  var drawETH = function (x) {
+    function poly(p, a) { x.globalAlpha = a; x.beginPath(); x.moveTo(p[0][0], p[0][1]);
+      for (var i = 1; i < p.length; i++) x.lineTo(p[i][0], p[i][1]); x.closePath(); x.fill(); }
+    poly([[256,90],[160,260],[256,310],[352,260]], 1);
+    poly([[256,90],[256,310],[352,260]], .7);
+    poly([[160,285],[256,335],[256,425]], .9);
+    poly([[352,285],[256,335],[256,425]], .6);
+    x.globalAlpha = 1;
+  };
+  var drawXMR = function (x) {
+    x.save();
+    x.translate(256, 256); x.scale(0.8, 0.8); x.translate(-256, -256);
+    x.beginPath(); x.arc(256, 256, 256, 0, Math.PI * 2); x.clip();
+    x.fillStyle = '#4c4c4c';
+    x.beginPath();
+    x.moveTo(141, 145); x.lineTo(256, 260); x.lineTo(371, 145); x.lineTo(371, 337);
+    x.lineTo(512, 337); x.lineTo(512, 512); x.lineTo(0, 512); x.lineTo(0, 337); x.lineTo(141, 337);
+    x.closePath(); x.fill();
+    x.strokeStyle = '#fff'; x.lineWidth = 16; x.lineJoin = 'miter'; x.miterLimit = 10;
+    x.beginPath();
+    x.moveTo(-20, 337); x.lineTo(141, 337); x.lineTo(141, 145); x.lineTo(256, 260);
+    x.lineTo(371, 145); x.lineTo(371, 337); x.lineTo(532, 337);
+    x.stroke();
+    x.restore();
+  };
+
+  var defs = [
+    { bg: '#f7931a', draw: drawBTC, color: 0xf7931a },
+    { bg: '#627eea', draw: drawETH, color: 0x627eea },
+    { bg: '#ff6600', draw: drawXMR, color: 0xff6600 }
+  ];
+
+  var geo = new THREE.CylinderGeometry(1.2, 1.2, 0.3, 48);
+  var mats = defs.map(function (d) {
+    var side = new THREE.MeshPhongMaterial({ color: d.color, shininess: 120, specular: 0xffffff });
+    var cap = new THREE.MeshPhongMaterial({ map: face(d.bg, d.draw), shininess: 80, specular: 0x666666 });
+    return [side, cap, cap];
+  });
+
+  var halfW = 5, halfH = 4;
+  function bounds() {
+    var h = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+    halfH = h / 2 - RADIUS; halfW = (h * camera.aspect) / 2 - RADIUS;
+  }
+
+  var coins = [];
+  function resize() {
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.position.z = w / h < 1 ? 15 : 9;
+    camera.updateProjectionMatrix();
+    bounds();
+    coins.forEach(function (c) {
+      c.p.x = Math.max(-halfW, Math.min(halfW, c.p.x));
+      c.p.y = Math.max(-halfH, Math.min(halfH, c.p.y));
+    });
+  }
+  window.addEventListener('resize', resize);
+  camera.position.z = window.innerWidth / window.innerHeight < 1 ? 15 : 9;
+  camera.updateProjectionMatrix();
+  camera.aspect = window.innerWidth / window.innerHeight;
+  bounds();
+
+  for (var i = 0; i < COUNT; i++) {
+    var mesh = new THREE.Mesh(geo, mats[i % 3]);
+    mesh.rotation.x = Math.PI / 2;
+    var group = new THREE.Group();
+    group.scale.set(SCALE, SCALE, SCALE);
+    group.add(mesh);
+    scene.add(group);
+    var p = new THREE.Vector3(), ok, tries = 0;
+    do {
+      p.set((Math.random() * 2 - 1) * halfW, (Math.random() * 2 - 1) * halfH, (Math.random() - 0.5) * 1.2);
+      ok = true;
+      for (var j = 0; j < coins.length; j++) {
+        if (coins[j].p.distanceTo(p) < RADIUS * 2.1) { ok = false; break; }
+      }
+    } while (!ok && ++tries < 300);
+    var a = Math.random() * Math.PI * 2, sp = 0.6 + Math.random() * 1.2;
+    coins.push({
+      group: group, p: p.clone(),
+      v: new THREE.Vector3(Math.cos(a) * sp, Math.sin(a) * sp, 0),
+      tx: 0, ty: 0, tz: 0, next: 0, sx: 0, sy: 0
+    });
+  }
+  resize();
+
+  var pointer = { x: 0, y: 0, down: false, active: false, last: 0, px: 0, py: 0 };
+
+  function setPointer(e) {
+    var r = canvas.getBoundingClientRect();
+    var nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+    var ny = -(((e.clientY - r.top) / r.height) * 2 - 1);
+    if (pointer.down) {
+      var dx = nx - pointer.px, dy = ny - pointer.py;
+      coins.forEach(function (c) { c.sy += dx * 4; c.sx -= dy * 4; });
+    }
+    pointer.px = pointer.x = nx; pointer.py = pointer.y = ny;
+    pointer.active = true; pointer.last = performance.now();
+  }
+  window.addEventListener('pointermove', setPointer, { passive: true });
+  window.addEventListener('pointerdown', function (e) { pointer.down = true; setPointer(e); }, { passive: true });
+  window.addEventListener('pointerup', function () { pointer.down = false; }, { passive: true });
+  window.addEventListener('pointercancel', function () { pointer.down = false; pointer.active = false; }, { passive: true });
+  window.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+
+  var n = new THREE.Vector3(), rv = new THREE.Vector3();
+
+  function collide() {
+    var minD = RADIUS * 2;
+    for (var i = 0; i < coins.length; i++) {
+      for (var j = i + 1; j < coins.length; j++) {
+        var a = coins[i], b = coins[j];
+        n.subVectors(b.p, a.p);
+        var d = n.length();
+        if (d < minD) {
+          if (d < 1e-5) { n.set(1, 0, 0); d = 1e-5; } else n.divideScalar(d);
+          var push = (minD - d) / 2;
+          a.p.addScaledVector(n, -push);
+          b.p.addScaledVector(n, push);
+          rv.subVectors(b.v, a.v);
+          var vn = rv.dot(n);
+          if (vn < 0) {
+            a.v.addScaledVector(n, vn);
+            b.v.addScaledVector(n, -vn);
+            a.sy += (Math.random() - 0.5) * 3; b.sy += (Math.random() - 0.5) * 3;
+            a.sx += (Math.random() - 0.5) * 3; b.sx += (Math.random() - 0.5) * 3;
+          }
+        }
+      }
+    }
+  }
+
+  var clock = new THREE.Clock();
+  function tick() {
+    requestAnimationFrame(tick);
+    var dt = Math.min(clock.getDelta(), 0.04), t = clock.elapsedTime, now = performance.now();
+    var live = pointer.active && (now - pointer.last < 2500);
+    var wx = pointer.x * (halfW + RADIUS), wy = pointer.y * (halfH + RADIUS);
+
+    coins.forEach(function (c) {
+      var g = c.group;
+      if (live) {
+        var dx = c.p.x - wx, dy = c.p.y - wy, dist = Math.sqrt(dx * dx + dy * dy) + 1e-4;
+        var reach = pointer.down ? 3.2 : 2.2;
+        if (dist < reach) {
+          var f = (reach - dist) * (pointer.down ? 18 : 10) * dt;
+          c.v.x += (dx / dist) * f; c.v.y += (dy / dist) * f;
+        }
+        g.rotation.y += (pointer.x * 1.2 - g.rotation.y) * 4 * dt + c.sy * dt;
+        g.rotation.x += (-pointer.y * 1.2 - g.rotation.x) * 4 * dt + c.sx * dt;
+        g.rotation.z += (0 - g.rotation.z) * 3 * dt;
+      } else {
+        if (t > c.next) {
+          c.tx = (Math.random() - 0.5) * 2.2;
+          c.ty = (Math.random() - 0.5) * Math.PI * 2;
+          c.tz = (Math.random() - 0.5) * 0.8;
+          c.next = t + 1.5 + Math.random() * 2.5;
+        }
+        g.rotation.x += (c.tx - g.rotation.x) * 1.2 * dt + c.sx * dt;
+        g.rotation.y += (c.ty - g.rotation.y) * 1.2 * dt + c.sy * dt;
+        g.rotation.z += (c.tz - g.rotation.z) * 1.2 * dt;
+        c.v.x += (Math.random() - 0.5) * 2 * dt;
+        c.v.y += (Math.random() - 0.5) * 2 * dt;
+      }
+      c.sx *= 0.92; c.sy *= 0.92;
+
+      c.v.z += (-c.p.z * 2) * dt;
+      var sp = c.v.length();
+      if (sp > MAX_SPEED) c.v.multiplyScalar(MAX_SPEED / sp);
+      else if (!live && sp < 0.5) c.v.multiplyScalar(0.5 / (sp + 1e-4));
+      if (live || sp > 1.6) c.v.multiplyScalar(1 - 0.35 * dt);
+      c.p.addScaledVector(c.v, dt);
+
+      if (c.p.x < -halfW) { c.p.x = -halfW; c.v.x = Math.abs(c.v.x); }
+      if (c.p.x > halfW) { c.p.x = halfW; c.v.x = -Math.abs(c.v.x); }
+      if (c.p.y < -halfH) { c.p.y = -halfH; c.v.y = Math.abs(c.v.y); }
+      if (c.p.y > halfH) { c.p.y = halfH; c.v.y = -Math.abs(c.v.y); }
+      if (c.p.z < -1.5) { c.p.z = -1.5; c.v.z = Math.abs(c.v.z); }
+      if (c.p.z > 1.5) { c.p.z = 1.5; c.v.z = -Math.abs(c.v.z); }
+    });
+
+    collide();
+    coins.forEach(function (c) { c.group.position.copy(c.p); });
+    renderer.render(scene, camera);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
